@@ -87,7 +87,7 @@ from open_webui.constants import ERROR_MESSAGES
 from open_webui.env import SRC_LOG_LEVELS
 from fastapi import Depends, FastAPI, File, Form, HTTPException, UploadFile, status
 from fastapi.middleware.cors import CORSMiddleware
-from langchain.text_splitter import RecursiveCharacterTextSplitter
+from langchain.text_splitter import RecursiveCharacterTextSplitter, CharacterTextSplitter
 from langchain_community.document_loaders import (
     BSHTMLLoader,
     CSVLoader,
@@ -954,13 +954,19 @@ def store_web_search(form_data: SearchForm, user=Depends(get_verified_user)):
 def store_data_in_vector_db(
     data, collection_name, metadata: Optional[dict] = None, overwrite: bool = False
 ) -> bool:
-    text_splitter = RecursiveCharacterTextSplitter(
-        chunk_size=app.state.config.CHUNK_SIZE,
-        chunk_overlap=app.state.config.CHUNK_OVERLAP,
-        add_start_index=True,
-    )
+    
+    text_splitter_1 = CharacterTextSplitter(chunk_size=10, chunk_overlap=0, separator = "。")
+    text_splitter_2 = CharacterTextSplitter(chunk_size=10, chunk_overlap=0, separator = "、")
+    text_splitter_3 = CharacterTextSplitter(chunk_size=10, chunk_overlap=0, separator = "\n")
+    logger = logging.getLogger("langchain")
+    logger.setLevel(logging.ERROR)
+    texts_1 = text_splitter_1.split_documents(data)
+    texts_2 = text_splitter_2.split_documents(data)
+    texts_3 = text_splitter_3.split_documents(data)
+    docs = texts_1 + texts_2 + texts_3
 
-    docs = text_splitter.split_documents(data)
+    for i in range(len(docs)):
+        docs[i].page_content = docs[i].page_content.replace("\n", "")
 
     if len(docs) > 0:
         log.info(f"store_data_in_vector_db {docs}")

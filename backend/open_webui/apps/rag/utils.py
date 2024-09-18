@@ -14,6 +14,7 @@ from langchain.retrievers import ContextualCompressionRetriever, EnsembleRetriev
 from langchain_community.retrievers import BM25Retriever
 from langchain_core.documents import Document
 from open_webui.utils.misc import get_last_user_message
+from langchain.document_loaders import PyPDFLoader
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["RAG"])
@@ -33,7 +34,18 @@ def query_doc(
             query_embeddings=[query_embeddings],
             n_results=k,
         )
-
+        
+        for i in range(len(result['metadatas'][0])):
+            meta = result['metadatas'][0][i]
+            source = meta['source']
+            page = meta['page']
+            
+            loader = PyPDFLoader(source)
+            documents = loader.load()
+            new_content = documents[page].page_content
+            new_content = new_content.replace("\n", "")
+            result['documents'][0][i] = new_content
+            
         log.info(f"query_doc:result {result}")
         return result
     except Exception as e:
